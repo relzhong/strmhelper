@@ -80,4 +80,4 @@ make build
 
 ## 📄 License
 
-MIT License. See `LICENSE` for more details.
+AGPL-3.0 License. See `LICENSE` for more details.
