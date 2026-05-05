@@ -72,13 +72,12 @@ func (s *SettingManager) initDirs() {
 }
 
 func (s *SettingManager) loadConfig() {
-	s.Config.Web.Username = "admin"
-	s.Config.Web.Password = "admin"
-
 	configPath := filepath.Join(s.ConfigDir, "config.yaml")
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
+			s.Config.Web.Username = "admin"
+			s.Config.Web.Password = "admin"
 			return
 		}
 		log.Fatalf("Failed to read config file: %v", err)
@@ -89,5 +88,14 @@ func (s *SettingManager) loadConfig() {
 		log.Fatalf("Failed to unmarshal config: %v", err)
 	}
 
+	// Apply defaults if still empty after unmarshal
+	if s.Config.Web.Username == "" {
+		s.Config.Web.Username = "admin"
+	}
+	if s.Config.Web.Password == "" {
+		s.Config.Web.Password = "admin"
+	}
+
 	s.Debug = s.Config.Settings.Dev
+	slog.Debug("Configuration loaded", "web_user", s.Config.Web.Username, "debug_mode", s.Debug)
 }
