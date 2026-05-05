@@ -77,6 +77,10 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
     needs: build
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     steps:
       - name: Download digests
         uses: actions/download-artifact@v4
@@ -110,7 +114,7 @@ jobs:
       - name: Create manifest list and push
         working-directory: /tmp/digests
         run: |
-          docker buildx imagetools create $(echo $DOCKER_METADATA_OUTPUT_TAGS | xargs -n 1 echo -t) \
+          docker buildx imagetools create $(echo "${{ steps.meta.outputs.tags }}" | xargs -n 1 echo -t) \
             $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
 
       - name: Inspect image
