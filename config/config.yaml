@@ -1,0 +1,6 @@
+Settings:
+  DEV: True
+
+Web:
+  Username: admin
+  Password: password123

@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StrmHelper Admin</title>
+    <!-- Pico.css -->
+    <link rel="stylesheet" href="/ui/static/css/pico.min.css">
+    <!-- HTMX -->
+    <script src="/ui/static/js/htmx.min.js"></script>
+    <!-- i18n -->
+    <script src="/ui/static/js/i18n.js"></script>
+    <style>
+        :root {
+            --pico-font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            --pico-border-radius: 1rem;
+            --pico-primary: #6366f1;
+            --pico-primary-hover: #4f46e5;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: radial-gradient(circle at top right, rgba(99, 102, 241, 0.05), transparent),
+                radial-gradient(circle at bottom left, rgba(168, 85, 247, 0.05), transparent);
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 0;
+        }
+
+        #content-area {
+            width: 100%;
+            max-width: 1000px;
+            padding: 1rem;
+        }
+
+        .login-card {
+            max-width: 450px;
+            margin: 0 auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(8px);
+        }
+
+        .nav-container {
+            border-bottom: 1px solid var(--pico-muted-border-color);
+            margin-bottom: 2rem;
+        }
+
+        .fade-in {
+            animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        header strong {
+            font-size: 1.5rem;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        article header {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #error-modal {
+            z-index: 2000;
+        }
+
+        #error-modal article {
+            background-color: var(--pico-background-color);
+            box-shadow: var(--pico-card-sectionning-background-color) 0px 0px 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="container">
+        <nav>
+            <ul>
+                <li><strong>StrmHelper</strong></li>
+            </ul>
+            <ul>
+                <li>
+                    <select id="lang-select" onchange="switchLang(this.value)"
+                        style="margin-bottom: 0; padding: 0.2rem 1.8rem 0.2rem 0.6rem; height: auto; width: auto; font-size: 0.75rem; border-radius: 2rem; background-color: transparent; border: 1px solid var(--pico-primary); color: var(--pico-primary); cursor: pointer; min-width: 4rem;">
+                        <option value="en">EN</option>
+                        <option value="zh">ZH</option>
+                    </select>
+                </li>
+                <li style="padding: 0; margin-left: 1rem;">
+                    <ul id="nav-links" style="display: flex; margin: 0; padding: 0; list-style: none; gap: 1rem;">
+                        <!-- Links will be updated based on state -->
+                    </ul>
+                </li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="container">
+        <div id="content-area" hx-get="/ui/content" hx-trigger="load">
+            <!-- Content will be loaded here -->
+            <div aria-busy="true">Loading...</div>
+        </div>
+    </main>
+
+    <footer class="container">
+
+    </footer>
+
+    <!-- Error Modal -->
+    <dialog id="error-modal">
+        <article>
+            <header>
+                <button aria-label="Close" rel="prev" onclick="closeErrorModal()"></button>
+                <strong style="color: #ef4444;">Error</strong>
+            </header>
+            <p id="error-modal-content"></p>
+            <footer>
+                <button onclick="closeErrorModal()">OK</button>
+            </footer>
+        </article>
+    </dialog>
+
+    <script>
+        // Initialize language switcher state
+        document.addEventListener('DOMContentLoaded', () => {
+            const select = document.querySelector('select[onchange^="switchLang"]');
+            if (select) {
+                select.value = currentLang;
+            }
+        });
+
+        // Global HTMX error handling
+        const errorModal = document.getElementById('error-modal');
+        const errorContent = document.getElementById('error-modal-content');
+
+        function closeErrorModal() {
+            if (typeof errorModal.close === "function") {
+                errorModal.close();
+            } else {
+                errorModal.removeAttribute('open');
+            }
+        }
+
+        document.body.addEventListener('htmx:responseError', (event) => {
+            const errorMsg = event.detail.xhr.responseText || "An unknown error occurred";
+            errorContent.innerText = errorMsg;
+            if (typeof errorModal.showModal === "function") {
+                errorModal.showModal();
+            } else {
+                errorModal.setAttribute('open', 'true');
+            }
+        });
+    </script>
+</body>
+
+</html>

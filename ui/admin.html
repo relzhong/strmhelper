@@ -1,0 +1,517 @@
+<div class="fade-in">
+    <header>
+        <nav>
+            <ul>
+                <li>
+                    <h2 data-i18n="dashboard">Dashboard</h2>
+                </li>
+            </ul>
+            <ul>
+                <li><button onclick="document.getElementById('task-modal').showModal()" class="primary"
+                        data-i18n="add_task">Add New Task</button></li>
+            </ul>
+        </nav>
+    </header>
+
+    <div class="task-grid">
+        {{range .}}
+        <article class="task-card">
+            <header>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <strong>{{.TaskID}}</strong>
+                    <div>
+                        {{if .IsRunning}}
+                        <span class="badge running" data-i18n="running">Running</span>
+                        {{end}}
+                        <span class="badge">{{.Cron}}</span>
+                    </div>
+                </div>
+            </header>
+            <div class="task-info">
+                <div class="hover-container">
+                    <p><small data-i18n="url">URL</small> : {{.URL}}</p>
+                    <div class="hover-card">{{.URL}}</div>
+                </div>
+                <div class="hover-container">
+                    <p><small data-i18n="source_dir">Source</small> : {{.SourceDir}}</p>
+                    <div class="hover-card">{{.SourceDir}}</div>
+                </div>
+                <div class="hover-container">
+                    <p><small data-i18n="target_dir">Target</small> : {{.TargetDir}}</p>
+                    <div class="hover-card">{{.TargetDir}}</div>
+                </div>
+                <div class="hover-container">
+                    <p><small data-i18n="next_run">Next Run</small> : {{.NextRun}}</p>
+                    <div class="hover-card">{{.NextRun}}</div>
+                </div>
+                {{if .LastError}}
+                <div class="hover-container error-info">
+                    <p><small data-i18n="last_error">Last Error</small> : <span
+                            style="color: var(--pico-secondary)">{{.LastError}}</span></p>
+                    <div class="hover-card" style="border-color: var(--pico-secondary)">{{.LastError}}</div>
+                </div>
+                {{end}}
+            </div>
+            <footer>
+                <div class="grid">
+                    <button class="outline" hx-post="/api/tasks/run" hx-vals='{"id": {{.ID}}}' hx-swap="none"
+                        data-i18n="run_now">Run Now</button>
+                    <button class="outline secondary"
+                        onclick="editTask({{.ID}}, '{{.TaskID}}', '{{.Cron}}', '{{.URL}}', '{{.PublicURL}}', '{{.Username}}', '{{.Password}}', '{{.Token}}', '{{.SourceDir}}', '{{.TargetDir}}', {{.FlattenMode}}, {{.Subtitle}}, {{.Image}}, {{.NFO}}, '{{.Mode}}', {{.Overwrite}}, {{.SyncServer}}, '{{.SyncIgnore}}', {{.ProtectEnabled}}, {{.ProtectThreshold}}, {{.ProtectGrace}}, '{{.OtherExt}}', {{.MaxWorkers}}, {{.MaxDownloaders}}, {{.WaitTime}}, {{.CheckModTime}}, {{.SyncBack}})"
+                        data-i18n="edit">Edit</button>
+                    <button class="outline contrast" hx-delete="/api/tasks?id={{.ID}}" hx-confirm="Are you sure?"
+                        data-i18n="delete">Delete</button>
+                </div>
+            </footer>
+        </article>
+        {{else}}
+        <article>
+            <p data-i18n="no_tasks">No tasks found. Click "Add New Task" to get started.</p>
+        </article>
+        {{end}}
+    </div>
+
+    <!-- Task Modal -->
+    <dialog id="task-modal">
+        <article style="max-width: 900px; width: 95%;" data-theme="light">
+            <header>
+                <a href="#close" aria-label="Close" class="close"
+                    onclick="document.getElementById('task-modal').close()"></a>
+                <h3 id="modal-title" data-i18n="new_task">New Strm Task</h3>
+            </header>
+            <form id="task-form" hx-post="/api/tasks" hx-swap="none">
+                <input type="hidden" id="task-db-id" name="id">
+
+                <section>
+                    <h6 data-i18n="basic_info">Basic Information</h6>
+                    <div class="grid">
+                        <label>
+                            <span data-i18n="task_id">Task ID</span>
+                            <small data-i18n="task_id_help">(标识 ID)</small>
+                            <input type="text" name="task_id" id="f-task-id" data-i18n-placeholder="task_id" required>
+                        </label>
+                        <label>
+                            <span data-i18n="cron">Cron Expression</span>
+                            <small data-i18n="cron_help">(后台定时任务)</small>
+                            <input type="text" name="cron" id="f-cron" placeholder="0 20 * * *" required>
+                        </label>
+                    </div>
+                </section>
+
+                <section>
+                    <h6 data-i18n="connection">Openlist Connection</h6>
+                    <div class="grid">
+                        <label>
+                            <span data-i18n="url">Server URL</span>
+                            <small data-i18n="url_help">(Openlist 服务器地址)</small>
+                            <input type="text" name="url" id="f-url" placeholder="http://alist:5244" required>
+                        </label>
+                        <label>
+                            <span data-i18n="public_url">Public URL</span>
+                            <small data-i18n="public_url_help">(公共访问地址，可选)</small>
+                            <input type="text" name="public_url" id="f-public-url"
+                                placeholder="https://alist.example.com">
+                        </label>
+                    </div>
+                    <div class="grid">
+                        <label>
+                            <span data-i18n="username">Username</span>
+                            <small data-i18n="username_help">(用户名)</small>
+                            <input type="text" name="username" id="f-username">
+                        </label>
+                        <label>
+                            <span data-i18n="password">Password</span>
+                            <small data-i18n="password_help">(密码)</small>
+                            <input type="password" name="password" id="f-password">
+                        </label>
+                        <label>
+                            <span data-i18n="token">Token</span>
+                            <small data-i18n="token_help">(永久令牌，可选)</small>
+                            <input type="text" name="token" id="f-token">
+                        </label>
+                    </div>
+                </section>
+
+                <section>
+                    <h6 data-i18n="paths">Paths</h6>
+                    <div class="grid">
+                        <label>
+                            <span data-i18n="source_dir">Source Directory</span>
+                            <small data-i18n="source_dir_help">(服务器上文件夹路径)</small>
+                            <input type="text" name="source_dir" id="f-source-dir" placeholder="/media/" required>
+                        </label>
+                        <label>
+                            <span data-i18n="target_dir">Target Directory</span>
+                            <small data-i18n="target_dir_help">(本地输出路径)</small>
+                            <input type="text" name="target_dir" id="f-target-dir" placeholder="D:\media\" required>
+                        </label>
+                    </div>
+                </section>
+
+                <details>
+                    <summary data-i18n="advanced_settings">Advanced Settings & Features</summary>
+                    <div class="grid">
+                        <label><input type="checkbox" name="flatten_mode" id="f-flatten"> <span
+                                data-i18n="flatten_mode">Flatten Mode</span> <small
+                                data-i18n="flatten_mode_help">(平铺模式)</small></label>
+                        <label><input type="checkbox" name="subtitle" id="f-subtitle"> <span
+                                data-i18n="subtitle">Download Subtitle</span> <small
+                                data-i18n="subtitle_help">(下载字幕)</small></label>
+                        <label><input type="checkbox" name="image" id="f-image"> <span data-i18n="image">Download
+                                Image</span> <small data-i18n="image_help">(下载图片)</small></label>
+                        <label><input type="checkbox" name="nfo" id="f-nfo"> <span data-i18n="nfo">Download NFO</span>
+                            <small data-i18n="nfo_help">(下载 NFO)</small></label>
+                    </div>
+
+                    <hr>
+
+                    <div class="grid">
+                        <label>
+                            <span data-i18n="mode">Mode</span> <small data-i18n="mode_help">(Strm 文件内容模式)</small>
+                            <select name="mode" id="f-mode">
+                                <option value="OpenlistURL">OpenlistURL</option>
+                                <option value="RawURL">RawURL</option>
+                                <option value="OpenlistPath">OpenlistPath</option>
+                            </select>
+                        </label>
+                        <label><input type="checkbox" name="overwrite" id="f-overwrite"> <span
+                                data-i18n="overwrite">Overwrite</span> <small
+                                data-i18n="overwrite_help">(覆盖同名文件)</small></label>
+                        <label><input type="checkbox" name="sync_server" id="f-sync"> <span data-i18n="sync_server">Sync
+                                Server</span> <small data-i18n="sync_server_help">(同步服务器)</small></label>
+                    </div>
+
+                    <div class="grid">
+                        <label><input type="checkbox" name="sync_back" id="f-sync-back"> <span
+                                data-i18n="sync_back">Sync
+                                Back Delete</span> <small data-i18n="sync_back_help">(同步回服务器)</small></label>
+                        <label><input type="checkbox" name="check_mod_time" id="f-check-mod"> <span
+                                data-i18n="check_mod_time">Directory Time Check</span> <small
+                                data-i18n="check_mod_time_help">(目录时间校验)</small></label>
+                    </div>
+
+                    <div class="grid">
+                        <label>
+                            <span data-i18n="sync_ignore">Sync Ignore (Regex)</span> <small
+                                data-i18n="sync_ignore_help">(同步忽略正则)</small>
+                            <input type="text" name="sync_ignore" id="f-ignore" placeholder="\.(nfo|jpg)$">
+                        </label>
+                        <label>
+                            <span data-i18n="other_ext">Other Extensions</span> <small
+                                data-i18n="other_ext_help">(自定义下载后缀)</small>
+                            <input type="text" name="other_ext" id="f-other-ext" placeholder=".zip,.rar">
+                        </label>
+                    </div>
+
+                    <div class="grid">
+                        <label>
+                            <span data-i18n="max_workers">Max Workers</span> <small
+                                data-i18n="max_workers_help">(最大并发数)</small>
+                            <input type="number" name="max_workers" id="f-workers" value="50">
+                        </label>
+                        <label>
+                            <span data-i18n="max_downloaders">Max Downloaders</span> <small
+                                data-i18n="max_downloaders_help">(最大下载数)</small>
+                            <input type="number" name="max_downloaders" id="f-downloaders" value="5">
+                        </label>
+                        <label>
+                            <span data-i18n="wait_time">Wait Time (s)</span> <small
+                                data-i18n="wait_time_help">(遍历请求间隔)</small>
+                            <input type="number" name="wait_time" id="f-wait" value="0">
+                        </label>
+                    </div>
+
+                    <fieldset>
+                        <legend><span data-i18n="smart_protection">Smart Protection</span> <small
+                                data-i18n="smart_protection">(智能保护)</small></legend>
+                        <div class="grid">
+                            <label><input type="checkbox" name="protect_enabled" id="f-protect"> <span
+                                    data-i18n="enabled">Enabled</span> <small
+                                    data-i18n="enabled_help">(启用保护)</small></label>
+                            <label>
+                                <span data-i18n="threshold">Threshold</span> <small
+                                    data-i18n="threshold_help">(阈值)</small>
+                                <input type="number" name="protect_threshold" id="f-threshold" value="100">
+                            </label>
+                            <label>
+                                <span data-i18n="grace_scans">Grace Scans</span> <small
+                                    data-i18n="grace_scans_help">(扫描次数)</small>
+                                <input type="number" name="protect_grace" id="f-grace" value="3">
+                            </label>
+                        </div>
+                    </fieldset>
+                </details>
+
+                <footer>
+                    <button type="submit" class="primary" data-i18n="save_task">Save Task</button>
+                </footer>
+            </form>
+        </article>
+    </dialog>
+</div>
+
+<style>
+    .task-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+    }
+
+    @media (max-width: 800px) {
+        .task-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .task-card {
+        border-left: 4px solid var(--pico-primary);
+        transition: transform 0.2s, box-shadow 0.2s;
+        background: #ffffff;
+        color: #111927;
+    }
+
+    .task-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .badge {
+        background: var(--pico-primary);
+        color: white;
+        padding: 0.2rem 0.6rem;
+        border-radius: 2rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-left: 0.4rem;
+    }
+
+    .badge.running {
+        background: #10b981;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.6;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+
+    .task-info p {
+        margin-bottom: 0.4rem;
+        font-size: 0.9rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-right: 0;
+    }
+
+    .hover-container {
+        position: relative;
+        cursor: help;
+    }
+
+    .hover-card {
+        visibility: hidden;
+        width: 320px;
+        background-color: #ffffff;
+        color: #111927;
+        text-align: left;
+        border-radius: 0.75rem;
+        padding: 0.8rem 1rem;
+        position: absolute;
+        z-index: 1000;
+        bottom: 110%;
+        left: 20px;
+        opacity: 0;
+        transform: translateY(10px);
+        transition: opacity 0.3s, transform 0.3s, visibility 0.3s;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        word-break: break-all;
+        font-size: 0.85rem;
+        white-space: normal;
+        pointer-events: none;
+    }
+
+    .hover-card::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 30px;
+        border-width: 8px;
+        border-style: solid;
+        border-color: #ffffff transparent transparent transparent;
+    }
+
+    .hover-container:hover .hover-card {
+        visibility: visible;
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    .task-info small {
+        color: #707070;
+        font-weight: 600;
+        margin-right: 0.2rem;
+    }
+
+    section h6 {
+        margin-bottom: 0.5rem;
+        color: var(--pico-primary);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 0.25rem;
+    }
+
+    form label small {
+        display: block;
+        font-weight: normal;
+        color: var(--pico-muted-color);
+        margin-top: -0.2rem;
+        margin-bottom: 0.2rem;
+    }
+
+    dialog article {
+        background: #ffffff !important;
+        color: #111927 !important;
+    }
+
+    dialog article h3,
+    dialog article h6,
+    dialog article label,
+    dialog article summary {
+        color: #111927 !important;
+        cursor: pointer;
+    }
+
+    dialog article small {
+        color: #707070 !important;
+    }
+
+    dialog article input:not([type="checkbox"]):not([type="radio"]),
+    dialog article select {
+        background-color: #f9f9f9 !important;
+        color: #111927 !important;
+        border-color: #ddd !important;
+    }
+
+    .task-card footer {
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .task-card footer button {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+        height: auto;
+        margin-bottom: 0;
+    }
+
+    /* Checkbox Improvements */
+    dialog article label:has(input[type="checkbox"]) {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        grid-template-areas:
+            "check title"
+            "check help";
+        column-gap: 0.75rem;
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        cursor: pointer;
+        margin-bottom: 1rem;
+        align-items: start;
+        transition: all 0.2s;
+    }
+
+    dialog article label:has(input[type="checkbox"]):hover {
+        background: #f1f5f9;
+        border-color: var(--pico-primary);
+    }
+
+    dialog article label input[type="checkbox"] {
+        grid-area: check;
+        margin: 0.25rem 0 0 0 !important;
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+
+    dialog article label span {
+        grid-area: title;
+        font-weight: 600;
+        color: #1e293b;
+        line-height: 1.4;
+    }
+
+    dialog article label small {
+        grid-area: help;
+        margin: 0 !important;
+        color: #64748b !important;
+        font-size: 0.8rem;
+        line-height: 1.4;
+    }
+</style>
+
+<script>
+    document.getElementById('nav-links').innerHTML = `
+        <li><a href="#" hx-get="/ui/content" hx-target="#content-area" data-i18n="dashboard">Dashboard</a></li>
+        <li><a href="/api/logout" class="secondary" data-i18n="logout">Logout</a></li>
+    `;
+    htmx.process(document.getElementById('nav-links'));
+
+    function editTask(id, taskId, cron, url, publicUrl, user, pass, token, src, tgt, flatten, sub, img, nfo, mode, overwrite, sync, ignore, prot, thresh, grace, ext, workers, downloads, wait, checkModTime, syncBack) {
+        document.getElementById('modal-title').innerText = i18n('edit_task');
+        document.getElementById('modal-title').removeAttribute('data-i18n'); // prevent observer from overwriting the specific title
+        document.getElementById('task-db-id').value = id;
+        document.getElementById('f-task-id').value = taskId;
+        document.getElementById('f-cron').value = cron;
+        document.getElementById('f-url').value = url;
+        document.getElementById('f-public-url').value = publicUrl;
+        document.getElementById('f-username').value = user;
+        document.getElementById('f-password').value = pass;
+        document.getElementById('f-token').value = token;
+        document.getElementById('f-source-dir').value = src;
+        document.getElementById('f-target-dir').value = tgt;
+        document.getElementById('f-flatten').checked = flatten;
+        document.getElementById('f-subtitle').checked = sub;
+        document.getElementById('f-image').checked = img;
+        document.getElementById('f-nfo').checked = nfo;
+        document.getElementById('f-mode').value = mode;
+        document.getElementById('f-overwrite').checked = overwrite;
+        document.getElementById('f-sync').checked = sync;
+        document.getElementById('f-sync-back').checked = syncBack;
+        document.getElementById('f-check-mod').checked = checkModTime;
+        document.getElementById('f-ignore').value = ignore;
+        document.getElementById('f-protect').checked = prot;
+        document.getElementById('f-threshold').value = thresh;
+        document.getElementById('f-grace').value = grace;
+        document.getElementById('f-other-ext').value = ext;
+        document.getElementById('f-workers').value = workers;
+        document.getElementById('f-downloaders').value = downloads;
+        document.getElementById('f-wait').value = wait;
+
+        document.getElementById('task-form').setAttribute('hx-post', '/api/tasks/update?id=' + id);
+        htmx.process(document.getElementById('task-form'));
+
+        document.getElementById('task-modal').showModal();
+    }
+
+    // Reset modal title when opening for new task
+    document.querySelector('[data-i18n="add_task"]').addEventListener('click', () => {
+        const title = document.getElementById('modal-title');
+        title.setAttribute('data-i18n', 'new_task');
+        title.innerText = i18n('new_task');
+        document.getElementById('task-form').reset();
+        document.getElementById('task-db-id').value = '';
+        document.getElementById('task-form').setAttribute('hx-post', '/api/tasks');
+        htmx.process(document.getElementById('task-form'));
+    });
+</script>

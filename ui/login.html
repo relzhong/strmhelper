@@ -1,0 +1,24 @@
+<article class="login-card fade-in" style="background: #ffffff; color: #111927;" data-theme="light">
+    <header>
+        <h2 style="margin-bottom: 0; color: #111927;" data-i18n="login_title">StrmHelper Login</h2>
+    </header>
+    <form hx-post="/api/login" hx-target="#login-error">
+        <div id="login-error"></div>
+        <fieldset>
+            <label for="username" style="color: #111927;">
+                <span data-i18n="username">Username</span>
+                <input type="text" id="username" name="username" placeholder="admin" required style="background: #f9f9f9; color: #111927; border-color: #ddd;">
+            </label>
+            <label for="password" style="color: #111927;">
+                <span data-i18n="password">Password</span>
+                <input type="password" id="password" name="password" placeholder="••••••••" required style="background: #f9f9f9; color: #111927; border-color: #ddd;">
+            </label>
+        </fieldset>
+        <button type="submit" class="contrast" data-i18n="login_btn">Sign In</button>
+    </form>
+</article>
+
+<script>
+    // Clean up nav links on login page
+    document.getElementById('nav-links').innerHTML = '';
+</script>
