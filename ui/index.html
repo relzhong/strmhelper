@@ -163,7 +163,7 @@
 
         document.body.addEventListener('htmx:responseError', (event) => {
             const errorMsg = event.detail.xhr.responseText || "An unknown error occurred";
-            errorContent.innerText = errorMsg;
+            errorContent.innerHTML = errorMsg;
             if (typeof errorModal.showModal === "function") {
                 errorModal.showModal();
             } else {
