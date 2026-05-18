@@ -8,6 +8,15 @@ import (
 	"github.com/relzhong/strmhelper/pkgs/config"
 )
 
+func preventCaching(w http.ResponseWriter) {
+	// /ui/content depends on the session cookie, so a cached response can show
+	// the login fragment even after a successful login.
+	w.Header().Set("Cache-Control", "no-store, no-cache, must-revalidate")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
+	w.Header().Set("Vary", "Cookie")
+}
+
 func AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Skip auth for login api and static assets
@@ -42,6 +51,8 @@ func AuthMiddleware(next http.Handler) http.Handler {
 }
 
 func ContentHandler(w http.ResponseWriter, r *http.Request) {
+	preventCaching(w)
+
 	cookie, err := r.Cookie("session")
 	if err != nil || cookie.Value != "authenticated" {
 		http.ServeFile(w, r, "ui/login.html")
@@ -51,6 +62,8 @@ func ContentHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func LoginHandler(w http.ResponseWriter, r *http.Request) {
+	preventCaching(w)
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -77,6 +90,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	preventCaching(w)
+
 	http.SetCookie(w, &http.Cookie{
 		Name:    "session",
 		Value:   "",
