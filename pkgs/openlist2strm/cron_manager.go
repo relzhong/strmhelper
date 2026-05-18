@@ -14,6 +14,7 @@ type CronManager struct {
 	cron        *cron.Cron
 	tasks       map[string]cron.EntryID
 	cancelFuncs map[string]context.CancelFunc
+	activeRuns  map[string]int
 	mu          sync.Mutex
 }
 
@@ -24,6 +25,7 @@ func InitCronManager() {
 		cron:        cron.New(),
 		tasks:       make(map[string]cron.EntryID),
 		cancelFuncs: make(map[string]context.CancelFunc),
+		activeRuns:  make(map[string]int),
 	}
 	Manager.cron.Start()
 }
@@ -87,6 +89,13 @@ func (m *CronManager) GetNextRun(taskID string) string {
 	return "-"
 }
 
+func (m *CronManager) IsTaskRunning(taskID string) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return m.activeRuns[taskID] > 0
+}
+
 func (m *CronManager) RunTask(task models.StrmTask) {
 	slog.Info("RunTask started", "id", task.TaskID)
 
@@ -99,10 +108,15 @@ func (m *CronManager) RunTask(task models.StrmTask) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	m.cancelFuncs[task.TaskID] = cancel
+	m.activeRuns[task.TaskID]++
 	m.mu.Unlock()
 
 	defer func() {
 		m.mu.Lock()
+		m.activeRuns[task.TaskID]--
+		if m.activeRuns[task.TaskID] <= 0 {
+			delete(m.activeRuns, task.TaskID)
+		}
 		if _, ok := m.cancelFuncs[task.TaskID]; ok {
 			// Only delete if it's the same cancel function we started with
 			// (handles cases where a new task started before this defer ran)

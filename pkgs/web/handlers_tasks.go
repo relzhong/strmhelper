@@ -1,8 +1,8 @@
 package web
 
 import (
-	"log/slog"
 	"html/template"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -131,13 +131,22 @@ func DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(idStr)
 
 	var task models.StrmTask
-	db.DB.First(&task, id)
+	if err := db.DB.First(&task, id).Error; err != nil {
+		http.Error(w, "Task not found", http.StatusNotFound)
+		return
+	}
+
+	if openlist2strm.Manager.IsTaskRunning(task.TaskID) {
+		http.Error(w, "Task is still running; try again after it finishes.", http.StatusConflict)
+		return
+	}
+
 	openlist2strm.Manager.RemoveTask(task.TaskID)
-	
+
 	// Clean up related data (Hard delete)
 	db.DB.Unscoped().Where("task_id = ?", task.TaskID).Delete(&models.SyncedFile{})
 	db.DB.Unscoped().Where("task_id = ?", task.TaskID).Delete(&models.PendingRemoteDelete{})
-	
+
 	db.DB.Unscoped().Delete(&models.StrmTask{}, id)
 
 	w.Header().Set("HX-Redirect", "/ui/")
@@ -149,7 +158,7 @@ func RunTaskHandler(w http.ResponseWriter, r *http.Request) {
 		idStr = r.FormValue("id")
 	}
 	slog.Info("RunTaskHandler called", "idStr", idStr)
-	
+
 	if idStr == "" {
 		slog.Warn("RunTaskHandler: missing id parameter")
 		http.Error(w, "Missing id", http.StatusBadRequest)
@@ -172,7 +181,7 @@ func RunTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	slog.Info("Manual task trigger received", "id", task.TaskID)
 	go openlist2strm.Manager.RunTask(task)
-	
+
 	w.Header().Set("HX-Refresh", "true")
 	w.WriteHeader(http.StatusOK)
 }

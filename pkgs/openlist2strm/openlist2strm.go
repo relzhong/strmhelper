@@ -204,8 +204,13 @@ func (a *OpenList2Strm) Run() error {
 				if a.syncState.IsKnown(localPath) {
 					// Local delete detected
 					if a.syncState.HandleMissingLocal(localPath, fullPath) {
+						select {
+						case <-a.ctx.Done():
+							return false
+						default:
+						}
 						slog.Warn("Syncing back delete to remote", "remote", fullPath)
-						err := a.client.Remove(fullPath)
+						err := a.client.Remove(a.ctx, fullPath)
 						if err != nil {
 							slog.Error("Failed to remove remote file", "path", fullPath, "error", err)
 						} else {
@@ -572,7 +577,7 @@ type openListClient struct {
 
 func (c *openListClient) Init() error {
 	c.Addition.Address = strings.TrimSuffix(c.Addition.Address, "/")
-	
+
 	var resp struct {
 		Code int             `json:"code"`
 		Data openlist.MeResp `json:"data"`
@@ -581,7 +586,7 @@ func (c *openListClient) Init() error {
 		SetHeader("Authorization", c.Token).
 		SetResult(&resp).
 		Get(c.Address + "/api/me")
-	
+
 	if err == nil && resp.Code == 200 {
 		c.basePath = resp.Data.BasePath
 	} else {
@@ -613,7 +618,7 @@ func (c *openListClient) Login() (string, error) {
 		}).
 		SetResult(&resp).
 		Post(c.Address + "/api/auth/login")
-	
+
 	if err != nil {
 		return "", err
 	}
@@ -636,7 +641,7 @@ func (c *openListClient) List(path string) ([]openlist.ObjResp, error) {
 		}).
 		SetResult(&resp).
 		Post(c.Address + "/api/fs/list")
-	
+
 	if err != nil {
 		return nil, err
 	}
@@ -701,18 +706,19 @@ func (c *openListClient) getRawURL(p openlist.ObjResp, fullPath string) string {
 		}).
 		SetResult(&resp).
 		Post(c.Address + "/api/fs/get")
-	
+
 	if err == nil && resp.Code == 200 {
 		return resp.Data.RawURL
 	}
 	return ""
 }
 
-func (c *openListClient) Remove(fullPath string) error {
+func (c *openListClient) Remove(ctx context.Context, fullPath string) error {
 	var resp struct {
 		Code int `json:"code"`
 	}
 	_, err := c.resty.R().
+		SetContext(ctx).
 		SetHeader("Authorization", c.Token).
 		SetBody(map[string]interface{}{
 			"dir":   path.Dir(fullPath),
