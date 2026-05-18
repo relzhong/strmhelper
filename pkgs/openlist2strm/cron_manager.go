@@ -15,6 +15,8 @@ type CronManager struct {
 	tasks       map[string]cron.EntryID
 	cancelFuncs map[string]context.CancelFunc
 	activeRuns  map[string]int
+	runIDs      map[string]uint64
+	nextRunID   uint64
 	mu          sync.Mutex
 }
 
@@ -26,6 +28,7 @@ func InitCronManager() {
 		tasks:       make(map[string]cron.EntryID),
 		cancelFuncs: make(map[string]context.CancelFunc),
 		activeRuns:  make(map[string]int),
+		runIDs:      make(map[string]uint64),
 	}
 	Manager.cron.Start()
 }
@@ -41,6 +44,7 @@ func (m *CronManager) AddTask(task models.StrmTask) error {
 	if cancel, ok := m.cancelFuncs[task.TaskID]; ok {
 		cancel()
 		delete(m.cancelFuncs, task.TaskID)
+		delete(m.runIDs, task.TaskID)
 	}
 
 	if task.Cron == "" {
@@ -72,6 +76,7 @@ func (m *CronManager) RemoveTask(taskID string) {
 	if cancel, ok := m.cancelFuncs[taskID]; ok {
 		cancel()
 		delete(m.cancelFuncs, taskID)
+		delete(m.runIDs, taskID)
 		slog.Info("Running task cancelled", "id", taskID)
 	}
 }
@@ -107,24 +112,15 @@ func (m *CronManager) RunTask(task models.StrmTask) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	m.nextRunID++
+	runID := m.nextRunID
 	m.cancelFuncs[task.TaskID] = cancel
+	m.runIDs[task.TaskID] = runID
 	m.activeRuns[task.TaskID]++
 	m.mu.Unlock()
 
 	defer func() {
-		m.mu.Lock()
-		m.activeRuns[task.TaskID]--
-		if m.activeRuns[task.TaskID] <= 0 {
-			delete(m.activeRuns, task.TaskID)
-		}
-		if _, ok := m.cancelFuncs[task.TaskID]; ok {
-			// Only delete if it's the same cancel function we started with
-			// (handles cases where a new task started before this defer ran)
-			// Actually, comparing functions is not direct in Go, but we can just check if it's still there.
-			// Given our mutex usage, it's safer to just cleanup if it matches.
-			delete(m.cancelFuncs, task.TaskID)
-		}
-		m.mu.Unlock()
+		m.finishRun(task.TaskID, runID)
 		slog.Info("RunTask finished", "id", task.TaskID)
 		db.DB.Model(&task).Update("is_running", false)
 	}()
@@ -166,6 +162,20 @@ func (m *CronManager) RunTask(task models.StrmTask) {
 	}
 }
 
+func (m *CronManager) finishRun(taskID string, runID uint64) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.activeRuns[taskID]--
+	if m.activeRuns[taskID] <= 0 {
+		delete(m.activeRuns, taskID)
+	}
+	if m.runIDs[taskID] == runID {
+		delete(m.cancelFuncs, taskID)
+		delete(m.runIDs, taskID)
+	}
+}
+
 func (m *CronManager) Stop() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -176,4 +186,5 @@ func (m *CronManager) Stop() {
 		cancel()
 	}
 	m.cancelFuncs = make(map[string]context.CancelFunc)
+	m.runIDs = make(map[string]uint64)
 }
